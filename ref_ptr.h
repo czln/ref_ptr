@@ -36,6 +36,10 @@ namespace ref {
         }
         ~_ref_cnt() { deleter(p);}
 
+        // not allowed to copy
+        _ref_cnt(const _ref_cnt& lhs) = delete;
+        const _ref_cnt& operator=(const _ref_cnt& lhs) = delete;
+
         int add_ref();
         int dec_ref();
         
@@ -44,16 +48,16 @@ namespace ref {
     };
     template <typename T, typename Deleter>
     int _ref_cnt<T, Deleter>::add_ref() {
-        lock.lock();
+        // lock.lock();
         int tmp = ++cnt;
-        lock.unlock();
+        // lock.unlock();
         return tmp;
     }
     template <typename T, typename Deleter>
     int _ref_cnt<T, Deleter>::dec_ref() {
-        lock.lock();
+        // lock.lock();
         int tmp = --cnt;
-        lock.unlock();
+        // lock.unlock();
         return tmp;
     }
     
@@ -76,18 +80,41 @@ namespace ref {
          */
         ref_ptr() : pcnt(nullptr) { }
         ref_ptr(T *p) : pcnt(new _ref_cnt<T>(p)) {}
-        ref_ptr(const ref_ptr& lhs)
-            {pcnt = lhs.pcnt; pcnt->add_ref();}
-        const ref_ptr& operator=(const ref_ptr& lhs)
-            {pcnt = lhs.pcnt; pcnt->add_ref();}
-            
-        ref_ptr(const ref_ptr&& rhs)
-            {pcnt = rhs.pcnt; pcnt->add_ref();}
-        const ref_ptr& operator=(const ref_ptr&& rhs) 
-            {pcnt = rhs.pcnt; pcnt->add_ref();}
+
+        // copy assignment
+        ref_ptr(const ref_ptr& lhs) {
+            if (this != &lhs) {
+                pcnt = lhs.pcnt;
+                pcnt->add_ref();
+            }
+        }
+        const ref_ptr& operator=(const ref_ptr& lhs) {
+            if (this != &lhs) {
+                pcnt = lhs.pcnt;
+                pcnt->add_ref();
+            }
+            return *this;
+        }
+
+        // move assignment
+        ref_ptr(ref_ptr&& rhs) {
+            if (this != &rhs) {
+                pcnt = rhs.pcnt;
+                rhs = nullptr;
+            }
+        }
+        const ref_ptr& operator=(ref_ptr&& rhs) {
+            if (this != &rhs) {
+                pcnt = rhs.pcnt;
+                rhs = nullptr;
+            }
+            return *this;
+        }
         ~ref_ptr() {
-            if (!pcnt->dec_ref()) 
-                delete pcnt;
+            if (pcnt) {
+                if (!pcnt->dec_ref()) 
+                    delete pcnt;
+            }
         }
 
         T*  operator ->() {return pcnt->get_ptr(); }
@@ -123,20 +150,42 @@ namespace ref {
         ref_ptr() : pcnt(nullptr) { }
         ref_ptr (T *p, std::function<void(T*)> deleter=[](T *p){delete []p;}) :
             pcnt(new _ref_cnt<T, std::function<void(T*)>>(p, deleter)) {}
-        //copy assignment
-        ref_ptr(const ref_ptr& lhs)
-            {pcnt = lhs.pcnt; pcnt->add_ref();}
-        const ref_ptr& operator=(const ref_ptr& lhs) 
-            {pcnt = lhs.pcnt; pcnt->add_ref(); return *this;}
+
+        // copy assignment
+        ref_ptr(const ref_ptr& lhs) {
+            if (this != &lhs) {
+                pcnt = lhs.pcnt;
+                pcnt->add_ref();
+            }
+        }
+        const ref_ptr& operator=(const ref_ptr& lhs) {
+            if (this != &lhs) {
+                pcnt = lhs.pcnt;
+                pcnt->add_ref();
+            }
+            return *this;
+        }
+        
         // move assignment
-        ref_ptr(const ref_ptr&& rhs)
-            {pcnt = rhs.pcnt; rhs.~ref_ptr();}
-        const ref_ptr& operator=(const ref_ptr&& rhs) 
-            {pcnt = rhs.pcnt; rhs.~ref_ptr(); return *this;}
+        ref_ptr(ref_ptr&& rhs) {
+            if (this != &rhs) {
+                pcnt = rhs.pcnt;
+                rhs.pcnt = nullptr;
+            }
+        }
+        const ref_ptr& operator=(ref_ptr&& rhs) {
+            if (this != &rhs) {
+                pcnt = rhs.pcnt;
+                rhs.pcnt = nullptr;
+            }
+            return *this;
+        }
         // deconstructor
         ~ref_ptr() {
-            if (!pcnt->dec_ref()) 
-                delete pcnt;
+            if (pcnt) {
+                if (!pcnt->dec_ref()) 
+                    delete pcnt;
+            }
         }
     public:
         T&  operator [](int i) { return pcnt->get_ref(i); }
