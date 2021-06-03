@@ -44,7 +44,7 @@ namespace ref {
         int dec_ref();
         
         T&  get_ref(int i=0) {return *(p+i);}
-        T*  get_ptr() const { return p; }
+        T*  get_ptr(int i=0) const { return p+i; }
     };
     template <typename T, typename Deleter>
     int _ref_cnt<T, Deleter>::add_ref() {
@@ -189,6 +189,7 @@ namespace ref {
         }
     public:
         T&  operator [](int i) { return pcnt->get_ref(i); }
+        T*  get(int i=0) { return pcnt->get_ptr(i); }
 
     };
     /** TODO: @b operator+() */
