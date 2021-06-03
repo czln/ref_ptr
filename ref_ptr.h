@@ -118,7 +118,7 @@ namespace ref {
         }
 
         T*  operator ->() {return pcnt->get_ptr(); }
-
+        T*  get() { return pcnt->get_ptr(); }
         
     };
     

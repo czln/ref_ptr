@@ -14,6 +14,10 @@ public:
 
 };
 
+typedef struct {
+    int a;
+    char b;
+} s;
 
 
 int main() {
@@ -23,5 +27,16 @@ int main() {
     pb[0] = pa[0] = 0;
     pb[1] = pa[1] = 1;
     std::cout << pb[1] <<std::endl;
+
+    ref_ptr<int> a(new int (12));
+    printf("%d\n", *a);
+    s sa;
+    sa.a = 1;
+    sa.b = 'a';
+    ref_ptr<s> ps(new s(sa));
+    printf("%d %c\n", ps->a, ps->b);
+
+    int *aa = a.get();
+    printf("%d\n", *aa);
     return 0;
 }
