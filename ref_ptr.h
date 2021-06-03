@@ -43,6 +43,7 @@ namespace ref {
         int add_ref();
         int dec_ref();
         
+        int get_cnt() { return cnt;}
         T&  get_ref(int i=0) {return *(p+i);}
         T*  get_ptr(int i=0) const { return p+i; }
     };
@@ -119,6 +120,7 @@ namespace ref {
 
         T*  operator ->() {return pcnt->get_ptr(); }
         T*  get() { return pcnt->get_ptr(); }
+        int use_count {return pcnt->get_cnt();}
         
     };
     
@@ -190,6 +192,7 @@ namespace ref {
     public:
         T&  operator [](int i) { return pcnt->get_ref(i); }
         T*  get(int i=0) { return pcnt->get_ptr(i); }
+        int use_count {return pcnt->get_cnt();}
 
     };
     /** TODO: @b operator+() */
