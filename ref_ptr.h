@@ -120,7 +120,7 @@ namespace ref {
 
         T*  operator ->() {return pcnt->get_ptr(); }
         T*  get() { return pcnt->get_ptr(); }
-        int use_count {return pcnt->get_cnt();}
+        int use_count() {return pcnt->get_cnt();}
         
     };
     
@@ -192,7 +192,7 @@ namespace ref {
     public:
         T&  operator [](int i) { return pcnt->get_ref(i); }
         T*  get(int i=0) { return pcnt->get_ptr(i); }
-        int use_count {return pcnt->get_cnt();}
+        int use_count() {return pcnt->get_cnt();}
 
     };
     /** TODO: @b operator+() */
