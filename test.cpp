@@ -29,6 +29,10 @@ int main() {
     std::cout << pb[1] <<std::endl;
 
     ref_ptr<int> a(new int (12));
+    ref_ptr<int> b;
+    if (a && !b) {
+        printf("bool test ok\n");
+    }
     printf("%d\n", *a);
     s sa;
     sa.a = 1;

@@ -118,9 +118,24 @@ namespace ref {
             }
         }
 
+        operator bool() { return get(); }
         T*  operator ->() {return pcnt->get_ptr(); }
-        T*  get() { return pcnt->get_ptr(); }
+        T*  get() { if(pcnt) return pcnt->get_ptr(); return nullptr;}
         int use_count() {return pcnt->get_cnt();}
+        void reset() { // to empty
+            if (pcnt) {
+                if (!pcnt->dec_ref()) 
+                    delete pcnt;
+                pcnt = nullptr;
+            }
+        }
+        void reset(T* p) {
+            if (pcnt) {
+                if (!pcnt->dec_ref()) 
+                    delete pcnt;
+                pcnt = p;
+            }
+        }
         
     };
     
@@ -190,9 +205,24 @@ namespace ref {
             }
         }
     public:
+        operator bool() { return get(); }
         T&  operator [](int i) { return pcnt->get_ref(i); }
-        T*  get(int i=0) { return pcnt->get_ptr(i); }
+        T*  get(int i=0) { if (pcnt) return pcnt->get_ptr(i);  return nullptr; }
         int use_count() {return pcnt->get_cnt();}
+        void reset() { // to empty
+            if (pcnt) {
+                if (!pcnt->dec_ref()) 
+                    delete pcnt;
+                pcnt = nullptr;
+            }
+        }
+        void reset(T* p) {
+            if (pcnt) {
+                if (!pcnt->dec_ref()) 
+                    delete pcnt;
+                pcnt = p;
+            }
+        }
 
     };
     /** TODO: @b operator+() */
