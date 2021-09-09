@@ -6,8 +6,6 @@
 
 /**
  *  @brief  a simple smart pointer that can handle array buffer
- *  @bug    valgrind report: error calling PR_SET_PTRACER, vgdb might block
- *          env: wsl
  */
 namespace ref {
 
@@ -26,10 +24,10 @@ namespace ref {
         T *p;
     public:
         _ref_cnt() : cnt(0), p(nullptr), deleter([](T *ptr){
-                                                delete ptr;}) { }
-        explicit _ref_cnt(T *ptr, 
-                            Deleter deleter=[](T *ptr){
-                                                delete ptr;}) {
+            delete ptr;}) { }
+        explicit _ref_cnt(T *ptr,
+                          Deleter deleter=[](T *ptr){
+                              delete ptr;}) {
             cnt = 1;
             this->deleter = deleter;
             p = ptr;
@@ -38,11 +36,11 @@ namespace ref {
 
         // not allowed to copy
         _ref_cnt(const _ref_cnt& lhs) = delete;
-        const _ref_cnt& operator=(const _ref_cnt& lhs) = delete;
+        _ref_cnt& operator=(const _ref_cnt& lhs) = delete;
 
         int add_ref();
         int dec_ref();
-        
+
         int get_cnt() { return cnt;}
         T&  get_ref(int i=0) {return *(p+i);}
         T*  get_ptr(int i=0) const { return p+i; }
@@ -61,7 +59,7 @@ namespace ref {
         // lock.unlock();
         return tmp;
     }
-    
+
 
 
     /**
@@ -89,8 +87,9 @@ namespace ref {
                 pcnt->add_ref();
             }
         }
-        const ref_ptr& operator=(const ref_ptr& lhs) {
+        ref_ptr& operator=(const ref_ptr& lhs) {
             if (this != &lhs) {
+                reset();
                 pcnt = lhs.pcnt;
                 pcnt->add_ref();
             }
@@ -101,44 +100,47 @@ namespace ref {
         ref_ptr(ref_ptr&& rhs) {
             if (this != &rhs) {
                 pcnt = rhs.pcnt;
-                rhs = nullptr;
+                pcnt->add_ref();
+                rhs.reset();
             }
         }
-        const ref_ptr& operator=(ref_ptr&& rhs) {
+        ref_ptr& operator=(ref_ptr&& rhs) {
             if (this != &rhs) {
+                reset();
                 pcnt = rhs.pcnt;
-                rhs = nullptr;
+                pcnt->add_ref();
+                rhs.reset();
             }
             return *this;
         }
         ~ref_ptr() {
             if (pcnt) {
-                if (!pcnt->dec_ref()) 
+                if (!pcnt->dec_ref())
                     delete pcnt;
             }
         }
 
-        operator bool() { return get(); }
+        explicit operator bool() { return get(); }
         T*  operator ->() {return pcnt->get_ptr(); }
         T*  get() { if(pcnt) return pcnt->get_ptr(); return nullptr;}
         int use_count() {return pcnt->get_cnt();}
         void reset() { // to empty
             if (pcnt) {
-                if (!pcnt->dec_ref()) 
+                if (!pcnt->dec_ref())
                     delete pcnt;
                 pcnt = nullptr;
             }
         }
         void reset(T* p) {
             if (pcnt) {
-                if (!pcnt->dec_ref()) 
+                if (!pcnt->dec_ref())
                     delete pcnt;
                 pcnt = p;
             }
         }
-        
+
     };
-    
+
     // friend functions
     template <typename T>
     T& operator *(const ref_ptr<T>& val) {
@@ -148,9 +150,13 @@ namespace ref {
 
     /** 
      *  @brief  specialized ref_ptr for array objects
-     *  TODO:   check if it works for class deleter, i.g.
-     *          if @p  std::function<void(T*)> deleter needs
-     *          to be a template typename
+     *  @NOTE:  there will be a memory leak if this is called like: 
+     *  bad \code
+     *  ref_ptr<char[]> ptr(new char);
+     *  \endcode
+     *  good \code
+     *  ref_ptr<char[]> ptr(new char[1]);
+     *  \endcode
      */
     template <typename T, typename Deleter>
     class ref_ptr<T[], Deleter> {
@@ -165,8 +171,9 @@ namespace ref {
          *  allow convertion from @c T* to @c ref_ptr<T*,Deleter>
          */
         ref_ptr() : pcnt(nullptr) { }
+        /// \fixme: this would cause mismatched free just like std::shared_ptr
         ref_ptr (T *p, std::function<void(T*)> deleter=[](T *p){delete []p;}) :
-            pcnt(new _ref_cnt<T, std::function<void(T*)>>(p, deleter)) {}
+                pcnt(new _ref_cnt<T, std::function<void(T*)>>(p, deleter)) { }
 
         // copy assignment
         ref_ptr(const ref_ptr& lhs) {
@@ -175,50 +182,54 @@ namespace ref {
                 pcnt->add_ref();
             }
         }
-        const ref_ptr& operator=(const ref_ptr& lhs) {
+        ref_ptr& operator=(const ref_ptr& lhs) {
             if (this != &lhs) {
+                reset();
                 pcnt = lhs.pcnt;
                 pcnt->add_ref();
             }
             return *this;
         }
-        
+
         // move assignment
         ref_ptr(ref_ptr&& rhs) {
             if (this != &rhs) {
                 pcnt = rhs.pcnt;
-                rhs.pcnt = nullptr;
+                pcnt->add_ref();
+                rhs.reset();
             }
         }
-        const ref_ptr& operator=(ref_ptr&& rhs) {
+        ref_ptr& operator=(ref_ptr&& rhs) {
             if (this != &rhs) {
+                reset();
                 pcnt = rhs.pcnt;
-                rhs.pcnt = nullptr;
+                pcnt->add_ref();
+                rhs.reset();
             }
             return *this;
         }
         // deconstructor
         ~ref_ptr() {
             if (pcnt) {
-                if (!pcnt->dec_ref()) 
+                if (!pcnt->dec_ref())
                     delete pcnt;
             }
         }
     public:
-        operator bool() { return get(); }
+        explicit operator bool() { return get(); }
         T&  operator [](int i) { return pcnt->get_ref(i); }
         T*  get(int i=0) { if (pcnt) return pcnt->get_ptr(i);  return nullptr; }
         int use_count() {return pcnt->get_cnt();}
         void reset() { // to empty
             if (pcnt) {
-                if (!pcnt->dec_ref()) 
+                if (!pcnt->dec_ref())
                     delete pcnt;
                 pcnt = nullptr;
             }
         }
         void reset(T* p) {
             if (pcnt) {
-                if (!pcnt->dec_ref()) 
+                if (!pcnt->dec_ref())
                     delete pcnt;
                 pcnt = p;
             }
@@ -235,7 +246,7 @@ namespace ref {
     /** TODO: like std::make faster than constructors*/
     template <typename T, typename D = std::function<void(T*)>>
     ref_ptr<T, D> make_ref(T *p, D d=[](T* _p){delete _p;}) {
-        return ref_ptr<T, D>(p);
+        return ref_ptr<T, D>(p, d);
     }
     /** TODO:*/
     // template <typename T, typename D = std::function<void(T*)>>
