@@ -53,6 +53,10 @@ void basic_test() {
     // if (*i1 == 3)
     //     printf("basic test <int> reset implicit convert pass\n");
 
+    auto rm = make_ref<char>(1);
+    if (*rm == 1)
+        printf("basic make_ref<char> test pass\n");
+
 }
 
 void array_test() {
@@ -78,12 +82,12 @@ void array_test() {
 
     i1.reset(new int[2] {2,3});
     if (i1[0] == 2 && i1[1] == 3)
-        printf("array test <int> reset pass\n");
+        printf("array test <int[]> reset pass\n");
 
     auto rm = make_ref<char[]>(2);
     rm[0] = 0; 
     rm[1] = 1;
-    printf("array test make_ref pass\n");
+    printf("array test make_ref<char[]> pass\n");
 }
 
 
