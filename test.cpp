@@ -3,6 +3,9 @@
 // #include <initializer_list>
 using namespace ref;
 
+
+
+
 template <typename T>
 class test{
 private:
@@ -37,6 +40,19 @@ void basic_test() {
     if (tdm->get() == 1.1 && !td) {
         printf("basic test <template class> move assignemnt pass\n");
     }
+    auto tdm2(std::move(tdm));
+    auto tdc(tdm2);
+    auto tdc2 = tdc;
+
+    i1.reset(new int (2));
+    if (*i1 == 2)
+        printf("basic test <int> reset pass\n");
+
+    /// \TODO: 
+    // i1.reset(new unsigned int(3));
+    // if (*i1 == 3)
+    //     printf("basic test <int> reset implicit convert pass\n");
+
 }
 
 void array_test() {
@@ -56,6 +72,13 @@ void array_test() {
     if (tdm[0].get() == 1.1 && tdm[1].get() == 2.2 && !td) {
         printf("array test <template class> move assignemnt pass\n");
     }
+    auto tdm2(std::move(tdm));
+    auto tdc(tdm2);
+    auto tdc2 = tdc;
+
+    i1.reset(new int[2] {2,3});
+    if (i1[0] == 2 && i1[1] == 3)
+        printf("basic test <int> reset pass\n");
 
 }
 

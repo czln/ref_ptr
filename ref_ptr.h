@@ -10,6 +10,12 @@
 namespace ref {
 
 
+template <typename T>
+struct type_identity {using type = T;};
+template <typename T>
+using type_identity_t = typename type_identity<T>::type;
+
+
     /**
      *  @brief  reference counter
      *  NOTE:   thread safe is not guaranteed! T *p maybe changed
@@ -44,6 +50,8 @@ namespace ref {
         int get_cnt() { return cnt;}
         T&  get_ref(int i=0) {return *(p+i);}
         T*  get_ptr(int i=0) const { return p+i; }
+        void release() { deleter(p); }
+        void set_ptr(T *p_) { p = p_; }
     };
     template <typename T, typename Deleter>
     int _ref_cnt<T, Deleter>::add_ref() {
@@ -63,7 +71,7 @@ namespace ref {
 
 
     /**
-     *  @brief  a smart pointer like std::shared_ptr but 
+     *  @brief  a smart pointer like std::shared_ptr but
      *          able to handle array objects
      */
     template <typename T, typename Deleter=std::function<void(T*)>>
@@ -80,7 +88,7 @@ namespace ref {
         ref_ptr() : pcnt(nullptr) { }
         ref_ptr(T *p) : pcnt(new _ref_cnt<T>(p)) {}
 
-        // copy assignment
+        // copy operations
         ref_ptr(const ref_ptr& lhs) {
             if (this != &lhs) {
                 pcnt = lhs.pcnt;
@@ -96,7 +104,7 @@ namespace ref {
             return *this;
         }
 
-        // move assignment
+        // move operations
         ref_ptr(ref_ptr&& rhs) {
             if (this != &rhs) {
                 pcnt = rhs.pcnt;
@@ -131,11 +139,13 @@ namespace ref {
                 pcnt = nullptr;
             }
         }
-        void reset(T* p) {
+
+        template<typename U>
+        void reset(U* p) {
             if (pcnt) {
                 if (!pcnt->dec_ref())
                     delete pcnt;
-                pcnt = p;
+                pcnt = new _ref_cnt<U, type_identity_t< std::function<void(U*)> >>(p);
             }
         }
 
@@ -148,9 +158,9 @@ namespace ref {
     }
 
 
-    /** 
+    /**
      *  @brief  specialized ref_ptr for array objects
-     *  @NOTE:  there will be a memory leak if this is called like: 
+     *  @NOTE:  there will be a memory leak if this is called like:
      *  bad \code
      *  ref_ptr<char[]> ptr(new char);
      *  \endcode
@@ -227,11 +237,14 @@ namespace ref {
                 pcnt = nullptr;
             }
         }
-        void reset(T* p) {
+
+        /// \tparam U shall be implicit convertable to T (ref_ptr's tparam)
+        template<typename U>
+        void reset(U* p) {
             if (pcnt) {
                 if (!pcnt->dec_ref())
                     delete pcnt;
-                pcnt = p;
+                pcnt = new _ref_cnt<U, type_identity_t<std::function<void(U*)> >>(p, [](U* p){delete[]p; });
             }
         }
 
