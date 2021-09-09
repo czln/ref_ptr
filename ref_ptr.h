@@ -4,6 +4,8 @@
 #include <mutex>
 #include <functional>
 
+#include <type_traits>
+
 /**
  *  @brief  a simple smart pointer that can handle array buffer
  */
@@ -256,16 +258,26 @@ using type_identity_t = typename type_identity<T>::type;
     //     return val.pcnt->get_ref();
     // }
 
+#if __cplusplus > 201700
+    template <typename T>
+    inline constexpr bool is_array_v = std::is_array<T>::value;
+#else
+    template <typename T>
+    constexpr bool is_array_v = std::is_array<T>::value;
+#endif
+
     /** TODO: like std::make faster than constructors*/
-    template <typename T, typename D = std::function<void(T*)>>
-    ref_ptr<T, D> make_ref(T *p, D d=[](T* _p){delete _p;}) {
-        return ref_ptr<T, D>(p, d);
+    /// enable if \tparam T is not an array
+    template <typename T, typename ...Args>
+    std::enable_if_t<!is_array_v<T>, ref_ptr<T>> make_ref(Args... args) {
+        return ref_ptr<T>(new T(args...));
     }
     /** TODO:*/
-    // template <typename T, typename D = std::function<void(T*)>>
-    // ref_ptr<T[]> make_ref(T *p, D d=[](T* _p){delete[] _p;}) {
-    //     return ref_ptr<T, D>(p, d);
-    // }
-
+    template <typename T>
+    std::enable_if_t< is_array_v<T>, ref_ptr<std::remove_all_extents_t<T>[]> >
+    make_ref(size_t n) {
+        using U = std::remove_all_extents_t<T>;
+        return ref_ptr<U[]> (new U[n]);
+    }
 } // namespace ref
 #endif //SELF_REF_PTR_H

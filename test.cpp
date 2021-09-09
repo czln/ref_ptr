@@ -78,8 +78,12 @@ void array_test() {
 
     i1.reset(new int[2] {2,3});
     if (i1[0] == 2 && i1[1] == 3)
-        printf("basic test <int> reset pass\n");
+        printf("array test <int> reset pass\n");
 
+    auto rm = make_ref<char[]>(2);
+    rm[0] = 0; 
+    rm[1] = 1;
+    printf("array test make_ref pass\n");
 }
 
 
